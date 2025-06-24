@@ -12,25 +12,30 @@ const useCartProducts = () => {
     quantity: number
   ): ICartProduct => {
     if (currentProduct.id === targetProduct.id) {
-      return Object.assign({
+      return {
         ...currentProduct,
         quantity: currentProduct.quantity + quantity,
-      });
+      };
     } else {
       return currentProduct;
     }
   };
 
   const addProduct = (newProduct: ICartProduct) => {
-    let updatedProducts;
-    const isProductAlreadyInCart = products.some(
-      (product: ICartProduct) => newProduct.id === product.id
+    const existingProductIndex = products.findIndex(
+      (product) => product.id === newProduct.id
     );
 
-    if (isProductAlreadyInCart) {
-      updatedProducts = products.map((product: ICartProduct) => {
-        return updateQuantitySafely(product, newProduct, newProduct.quantity);
-      });
+    let updatedProducts;
+
+    if (existingProductIndex !== -1) {
+      updatedProducts = [...products];
+      const existingProduct = updatedProducts[existingProductIndex];
+      const updatedProduct = {
+        ...existingProduct,
+        quantity: existingProduct.quantity + newProduct.quantity,
+      };
+      updatedProducts[existingProductIndex] = updatedProduct;
     } else {
       updatedProducts = [...products, newProduct];
     }
@@ -58,12 +63,27 @@ const useCartProducts = () => {
   };
 
   const decreaseProductQuantity = (productToDecrease: ICartProduct) => {
-    const updatedProducts = products.map((product: ICartProduct) => {
-      return updateQuantitySafely(product, productToDecrease, -1);
+    let productIsRemoved = false;
+    let updatedProducts = products.map((product) => {
+      if (product.id === productToDecrease.id) {
+        const newQuantity = product.quantity - 1;
+        if (newQuantity <= 0) {
+          productIsRemoved = true;
+          return null; // Will be filtered out later
+        }
+        return { ...product, quantity: newQuantity };
+      }
+      return product;
     });
 
-    setProducts(updatedProducts);
-    updateCartTotal(updatedProducts);
+    if (productIsRemoved) {
+      updatedProducts = updatedProducts.filter(
+        (p): p is ICartProduct => p !== null
+      );
+    }
+
+    setProducts(updatedProducts as ICartProduct[]);
+    updateCartTotal(updatedProducts as ICartProduct[]);
   };
 
   return {
